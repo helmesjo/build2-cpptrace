@@ -18,6 +18,13 @@ exe{unittest}: src/{hxx ixx txx cxx}{**} cpptrace-src/{h hxx ixx txx}{**} $libs 
 
 cxx.poptions =+ "-I$src_base/cpptrace-src"
 
+# Upstream suppresses these warnings on the unit test target.
+#
+if ($cxx.class != 'msvc')
+  cxx.coptions += -Wno-pedantic -Wno-attributes
+if ($cxx.id == 'gcc')
+  cxx.coptions += -Wno-infinite-recursion
+
 # Upstream builds unit tests at -O0 (Debug) (the tests assume no inlining of
 # throw-site lambdas and check for specific filenames and line numbers in
 # traces).
