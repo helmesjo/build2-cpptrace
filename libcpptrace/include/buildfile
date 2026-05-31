@@ -4,7 +4,7 @@ pub_hdrs = {h hxx ixx txx}{**}
 
 # Install recreating subdirectories.
 #
-{hxx ixx txx}{*}:
+{h hxx ixx txx}{*}:
 {
   install         = include/
   install.subdirs = true
