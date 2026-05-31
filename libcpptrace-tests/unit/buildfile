@@ -20,6 +20,11 @@ cxx.poptions =+ "-I$src_base/cpptrace-src"
 
 if ($cxx.class == 'msvc')
   cxx.coptions += /Zi
+elif ($cxx.id == 'clang' && $cxx.target.system == 'darwin')
+  # Clang on darwin generates DWARF5 with __debug_names tables that Apple's
+  # CoreSymbolication (used by atos) cannot parse. Force DWARF4 so the
+  # compiler emits __apple_names tables instead, which atos handles correctly.
+  cxx.coptions += -g -gdwarf-4
 else
   cxx.coptions += -g
 
