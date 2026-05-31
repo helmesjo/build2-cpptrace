@@ -1,5 +1,5 @@
-libcpptrace-tests
+unittest
 
 # Testscript output directory (can be symlink).
 #
-test-libcpptrace-tests
+test-*
