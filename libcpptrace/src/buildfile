@@ -38,7 +38,7 @@ lib{cpptrace}: $pub/{$pub_hdrs}
 
 # Private headers and sources as well as dependencies.
 #
-lib{cpptrace}: cpptrace/{h hxx cxx mxx}{** -unwind/** -symbols/symbols_with_* -demangle/demangle_with_*} \
+lib{cpptrace}: cpptrace/hxx{**} cpptrace/{cxx mxx}{** -unwind/** -symbols/symbols_with_* -demangle/demangle_with_*} \
                $impl_libs $intf_libs
 
 lib{cpptrace}: cpptrace/unwind/cxx{unwind_with_unwind}:         include = $unwind_with_unwind
@@ -63,10 +63,11 @@ lib{cpptrace}: cpptrace/demangle/cxx{demangle_with_nothing}:    include = $deman
 #
 out_pfx_inc = [dir_path] $out_root/include/
 src_pfx_inc = [dir_path] $src_root/include/
-out_pfx_src = [dir_path] $out_root/src/
-src_pfx_src = [dir_path] $src_root/src/
+out_pfx_src = [dir_path] $out_root/src/cpptrace
+src_pfx_src = [dir_path] $src_root/src/cpptrace
 
-cxx.poptions =+ "-I$src_base/cpptrace" "-I$src_pfx_src" "-I$src_pfx_inc"
+cxx.poptions =+ "-I$out_pfx_src" "-I$src_pfx_src" \
+                "-I$out_pfx_inc" "-I$src_pfx_inc" "-I$src_base"
 
 if ($cxx.target.system != 'win32-msvc')
   objs{**}: cxx.coptions += -Wno-missing-field-initializers \
@@ -130,7 +131,7 @@ if ($unwind_with_libunwind)
 #
 lib{cpptrace}:
 {
-  cxx.export.poptions = "-I$src_base" "-I$src_pfx_src" "-I$src_pfx_inc"
+  cxx.export.poptions = "-I$out_pfx_inc" "-I$src_pfx_inc"
   cxx.export.libs = $intf_libs
 }
 
