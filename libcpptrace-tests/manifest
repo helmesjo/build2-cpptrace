@@ -18,7 +18,7 @@ depends: gtest ^ 1.11.0+1
 depends: gmock ^ 1.11.0+1
 depends:
 \
-libcpptrace == $
+libcpptrace
 {
   require
   {
