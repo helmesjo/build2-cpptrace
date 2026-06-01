@@ -12,7 +12,7 @@ The development setup for `cpptrace` uses the standard `bdep`-based workflow.
 For example:
 
 ```
-git clone .../cpptrace.git
+git clone https://github.com/build2-packaging/cpptrace.git
 cd cpptrace
 
 bdep init -C @gcc cc config.cxx=g++
