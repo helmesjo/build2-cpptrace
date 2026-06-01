@@ -150,17 +150,17 @@ else
 
 # Don't install private headers (except for testing).
 #
-{hxx ixx txx}{*}:
+cpptrace/{hxx ixx txx}{*}:
 {
-  install = ($config.libcpptrace.build_testing ? include/ : false)
+  install = ($config.libcpptrace.build_testing ? include/cpptrace/internal/ : false)
   install.subdirs = true
 }
 
-# Make sure private headers installed into /usr/include/cpptrace/ can
-# also be included without the directory prefix for tests.
+# Make sure private headers installed into cpptrace/internal/ can
+# also be included without the directory prefixes (for tests).
 #
 lib{cpptrace}: cxx.pkgconfig.include = include/ \
-               ($config.libcpptrace.build_testing ? include/cpptrace/ :)
+               ($config.libcpptrace.build_testing ? include/cpptrace/internal/ :)
 
 # Install module interfaces.
 #
