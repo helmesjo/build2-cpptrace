@@ -1,3 +1,5 @@
+using autoconf
+
 intf_libs = # Interface dependencies.
 impl_libs = # Implementation dependencies.
 #import xxxx_libs += libhello%lib{hello}
@@ -9,6 +11,9 @@ pub = [dir_path] ../include/
 include $pub
 
 pub_hdrs = $($pub/ pub_hdrs)
+
+./: lib{cpptrace}
+lib{cpptrace}: h{cpptrace-autoconf} $pub/{$pub_hdrs}
 
 # Unwind back-ends.
 #
@@ -34,7 +39,33 @@ demangle_with_cxxabi  = $config.libcpptrace.demangle_with_cxxabi
 demangle_with_winapi  = $config.libcpptrace.demangle_with_winapi
 demangle_with_nothing = $config.libcpptrace.demangle_with_nothing
 
-lib{cpptrace}: $pub/{$pub_hdrs}
+# Platform capability detection via autoconf checks and compiler predefs.
+# Results are brought into buildfile scope and used as -D flags below, since
+# cpptrace sources rely on them being passed as compile definitions rather than
+# included from a config header.
+#
+h{cpptrace-autoconf}: in{cpptrace-autoconf}
+
+[rule_hint=c.predefs] \
+buildfile{cpptrace-autoconf}: h{cpptrace-autoconf}
+{
+  c.predefs.poptions = false
+  c.predefs.macros = HAVE_ATTRIBUTE_PACKED HAVE_MACH_MACH_VM_H
+}
+
+# Initialize to false for non-perform operations (e.g. configure).
+#
+HAS_ATTRIBUTE_PACKED = [bool] false
+CPPTRACE_HAS_MACH_VM = [bool] false
+
+if ($build.meta_operation == 'perform')
+{
+  update buildfile{cpptrace-autoconf}
+  source $path(buildfile{cpptrace-autoconf})
+
+  HAS_ATTRIBUTE_PACKED = ($HAVE_ATTRIBUTE_PACKED == 1 ? true : false)
+  CPPTRACE_HAS_MACH_VM = ($HAVE_MACH_MACH_VM_H   == 1 ? true : false)
+}
 
 # Private headers and sources as well as dependencies.
 #
@@ -69,6 +100,13 @@ src_pfx_src = [dir_path] $src_root/src/cpptrace
 cxx.poptions =+ "-I$out_pfx_src" "-I$src_pfx_src" \
                 "-I$out_pfx_inc" "-I$src_pfx_inc" "-I$src_base" \
                 ($config.libcpptrace.build_testing ? -DCPPTRACE_BUILD_TESTING:)
+
+# Platform capability flags (mirrors upstream cmake/Autoconfig.cmake checks).
+#
+cxx.poptions += \
+  ($HAS_ATTRIBUTE_PACKED ? -DHAS_ATTRIBUTE_PACKED :) \
+  ($CPPTRACE_HAS_MACH_VM ? -DCPPTRACE_HAS_MACH_VM :) \
+  (!($cxx.target.class == 'windows' && $cxx.target.system != 'mingw32') ? -DCPPTRACE_HAS_CXX_EXCEPTION_TYPE :)
 
 if ($cxx.target.system != 'win32-msvc')
   objs{**}: cxx.coptions += -Wno-missing-field-initializers \

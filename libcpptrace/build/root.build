@@ -6,6 +6,7 @@ cxx.std = latest
 
 using cxx
 using c
+using c.predefs
 
 hxx{*}: extension = hpp
 ixx{*}: extension = ipp
