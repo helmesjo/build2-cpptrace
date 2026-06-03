@@ -1,0 +1,7 @@
+: 1
+name: libcpptrace
+version: 1.0.4+2
+language: c++
+project: cpptrace
+summary: Portable C++ stacktrace library.
+license: MIT; MIT License.
