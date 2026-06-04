@@ -13,4 +13,6 @@ package-url: https://github.com/build2-packaging/cpptrace
 package-email: packaging@build2.org ; Mailing list.
 depends: * build2 >= 0.18.0
 depends: * bpkg >= 0.18.0
+depends: libz ^1.2.1200 ? ($config.libcpptrace.symbols_with_libdwarf)
+depends: libzstd ^1.5.5 ? ($config.libcpptrace.symbols_with_libdwarf)
 tests: libcpptrace-tests == $

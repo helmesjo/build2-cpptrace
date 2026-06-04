@@ -2,7 +2,6 @@ using autoconf
 
 intf_libs = # Interface dependencies.
 impl_libs = # Implementation dependencies.
-#import xxxx_libs += libhello%lib{hello}
 
 # Public headers.
 #
@@ -33,6 +32,12 @@ symbols_with_addr2line    = $config.libcpptrace.symbols_with_addr2line
 symbols_with_libdl        = $config.libcpptrace.symbols_with_libdl
 symbols_with_nothing      = $config.libcpptrace.symbols_with_nothing
 
+if ($symbols_with_libdwarf)
+{
+  import impl_libs += libz%lib{z}
+  import impl_libs += libzstd%lib{zstd}
+}
+
 # Demangling back-ends.
 #
 demangle_with_cxxabi  = $config.libcpptrace.demangle_with_cxxabi
@@ -53,21 +58,26 @@ h{cpptrace-autoconf}: in{cpptrace-autoconf}
 buildfile{cpptrace-autoconf}: h{cpptrace-autoconf}
 {
   c.predefs.poptions = false
-  c.predefs.macros = HAVE_ATTRIBUTE_PACKED HAVE_MACH_MACH_VM_H
+  c.predefs.macros = HAVE_ATTRIBUTE_PACKED HAVE_MACH_MACH_VM_H \
+                     HAVE_DL_FIND_OBJECT HAVE_DLADDR1
 }
 
 # Initialize to false for non-perform operations (e.g. configure).
 #
-HAS_ATTRIBUTE_PACKED = [bool] false
-CPPTRACE_HAS_MACH_VM = [bool] false
+HAS_ATTRIBUTE_PACKED        = [bool] false
+CPPTRACE_HAS_MACH_VM        = [bool] false
+CPPTRACE_HAS_DL_FIND_OBJECT = [bool] false
+CPPTRACE_HAS_DLADDR1        = [bool] false
 
 if ($build.meta_operation == 'perform')
 {
   update buildfile{cpptrace-autoconf}
   source $path(buildfile{cpptrace-autoconf})
 
-  HAS_ATTRIBUTE_PACKED = ($HAVE_ATTRIBUTE_PACKED == 1 ? true : false)
-  CPPTRACE_HAS_MACH_VM = ($HAVE_MACH_MACH_VM_H   == 1 ? true : false)
+  HAS_ATTRIBUTE_PACKED        = ($HAVE_ATTRIBUTE_PACKED     == 1 ? true : false)
+  CPPTRACE_HAS_MACH_VM        = ($HAVE_MACH_MACH_VM_H       == 1 ? true : false)
+  CPPTRACE_HAS_DL_FIND_OBJECT = ($HAVE_DL_FIND_OBJECT       == 1 ? true : false)
+  CPPTRACE_HAS_DLADDR1        = ($HAVE_DLADDR1              == 1 ? true : false)
 }
 
 # Private headers and sources as well as dependencies.
@@ -109,6 +119,8 @@ cxx.poptions =+ "-I$out_pfx_src" "-I$src_pfx_src" \
 cxx.poptions += \
   ($HAS_ATTRIBUTE_PACKED ? -DHAS_ATTRIBUTE_PACKED :) \
   ($CPPTRACE_HAS_MACH_VM ? -DCPPTRACE_HAS_MACH_VM :) \
+  ($CPPTRACE_HAS_DL_FIND_OBJECT ? -DCPPTRACE_HAS_DL_FIND_OBJECT :) \
+  ($CPPTRACE_HAS_DLADDR1 ? -DCPPTRACE_HAS_DLADDR1 :) \
   (!($cxx.target.class == 'windows' && $cxx.target.system != 'mingw32') ? -DCPPTRACE_HAS_CXX_EXCEPTION_TYPE :)
 
 if ($cxx.target.system != 'win32-msvc')
@@ -127,7 +139,7 @@ obj{**}: cxx.poptions += \
   ($unwind_with_execinfo  ? -DCPPTRACE_UNWIND_WITH_EXECINFO  :) \
   ($unwind_with_winapi    ? -DCPPTRACE_UNWIND_WITH_WINAPI    :) \
   ($unwind_with_dbghelp   ? -DCPPTRACE_UNWIND_WITH_DBGHELP   :) \
-  ($unwind_with_libunwind ? -DCPPTRACE_UNWIND_WITH_LIBUNWIND :) \
+  ($unwind_with_libunwind ? -DCPPTRACE_UNWIND_WITH_LIBUNWIND -DUNW_LOCAL_ONLY :) \
   ($unwind_with_nothing   ? -DCPPTRACE_UNWIND_WITH_NOTHING   :)
 
 # Symbol resolution back-ends.
@@ -147,27 +159,40 @@ obj{**}: cxx.poptions += \
   ($demangle_with_winapi  ? -DCPPTRACE_DEMANGLE_WITH_WINAPI  :) \
   ($demangle_with_nothing ? -DCPPTRACE_DEMANGLE_WITH_NOTHING :)
 
-# System libraries.
+# System libraries (implementation only, not exported).
 #
+sys_libs =
+
 if ($unwind_with_dbghelp || $symbols_with_dbghelp || $demangle_with_winapi)
 {
   if ($cxx.target.system == 'mingw32')
-    cxx.libs += -ldbghelp
+    sys_libs += -ldbghelp
   else
-    cxx.libs += dbghelp.lib
+    sys_libs += dbghelp.lib
 }
 
-if ($symbols_with_libdwarf || $symbols_with_libdl || $symbols_with_libbacktrace || $symbols_with_addr2line)
-{
-  if ($cxx.target.class != 'windows')
-    cxx.libs += -ldl
-}
+# dladdr in object.cpp is always used on Linux. MinGW only for libdl-family back-ends.
+#
+if ($cxx.target.class == 'linux')
+  sys_libs += -ldl
+
+if ($cxx.target.system == 'mingw32' && \
+    ($symbols_with_libdwarf || $symbols_with_libdl || $symbols_with_libbacktrace))
+  sys_libs += -ldl
+
+if ($symbols_with_libdwarf)
+  sys_libs += -ldwarf
 
 if ($symbols_with_libbacktrace)
-  cxx.libs += -lbacktrace
+  sys_libs += -lbacktrace
 
 if ($unwind_with_libunwind)
-  cxx.libs += -lunwind
+  sys_libs += -lunwind
+
+if ($unwind_with_execinfo && $cxx.target.class == 'bsd')
+  sys_libs += -lexecinfo
+
+cxx.libs += $sys_libs
 
 # Export options.
 #
